@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Search, Filter, Trash2, Loader2, CheckCircle } from 'lucide-react'; // Tambah icon CheckCircle
+import { Search, Filter, Trash2, Loader2, CheckCircle } from 'lucide-react'; 
 import axios from 'axios';
 
 const Riwayat = () => {
   const [laporanList, setLaporanList] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Format Tanggal
   const formatTanggal = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -32,7 +31,6 @@ const Riwayat = () => {
       });
       
       setLaporanList(response.data.data);
-
     } catch (error) {
       console.error("Gagal ambil data:", error);
     } finally {
@@ -40,32 +38,41 @@ const Riwayat = () => {
     }
   };
 
-  // --- INI FUNGSI YANG KEMAREN ILANG/MISSING ---
   const handleSelesai = async (id) => {
-
-    console.log("Mau update ID:", id);
-    // 1. Konfirmasi dulu biar ga kepencet
     if (!window.confirm("Yakin sampah ini udah diambil dan selesai?")) return;
-
     try {
       const token = localStorage.getItem('token');
-      
-      // 2. Tembak API Update Status (PUT)123qwe
-      
       await axios.put(`http://localhost:3000/api/waste/${id}/status`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      // 3. Refresh data biar statusnya berubah di layar
       await fetchData(); 
       alert("Mantap! Status berhasil diubah jadi Selesai.");
-
     } catch (error) {
       console.error("Gagal update:", error);
-      alert("Gagal update status. Cek backend udah jalan belum?");
+      alert("Gagal update status. Cek backend.");
     }
   };
-  // ---------------------------------------------
+
+  // 👇 FUNGSI HAPUS BARU 👇
+  const handleDelete = async (id) => {
+    if (!window.confirm("⚠️ Yakin mau MENGHAPUS data ini? Gak bisa dibalikin loh!")) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      // Tembak API Delete
+      await axios.delete(`http://localhost:3000/api/waste/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      // Hapus dari layar biar gak perlu refresh loading
+      setLaporanList(laporanList.filter(item => item.id !== id));
+      alert("Data berhasil dihapus selamanya.");
+
+    } catch (error) {
+      console.error("Gagal hapus:", error);
+      alert("Gagal menghapus data.");
+    }
+  };
 
   return (
     <div className="flex bg-[#F8F9FD] min-h-screen font-sans">
@@ -128,14 +135,23 @@ const Riwayat = () => {
                         </span>
                       </td>
                       
-                      {/* LOGIC TOMBOLNYA DI SINI */}
-                      <td className="p-4 text-center">
+                      <td className="p-4 text-center flex justify-center items-center gap-2">
+                        {/* TOMBOL DELETE (MERAH) */}
+                        <button 
+                            onClick={() => handleDelete(item.id)}
+                            className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                            title="Hapus Data"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+
+                        {/* TOMBOL SELESAI (BIRU/HIJAU) */}
                         {item.status !== 'selesai' ? (
                           <button 
                             onClick={() => handleSelesai(item.id)} 
                             className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors border border-blue-200"
                           >
-                            Tandai Selesai
+                            Selesai
                           </button>
                         ) : (
                           <span className="flex items-center justify-center gap-1 text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded-lg">
