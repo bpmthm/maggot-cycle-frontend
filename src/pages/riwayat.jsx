@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Search, Filter, Trash2, Loader2 } from 'lucide-react';
-import axios from 'axios'; // JANGAN LUPA: npm install axios
+import { Search, Filter, Trash2, Loader2, CheckCircle } from 'lucide-react'; // Tambah icon CheckCircle
+import axios from 'axios';
 
 const Riwayat = () => {
   const [laporanList, setLaporanList] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fungsi buat format tanggal dari ISO String (Backend) ke format Indo
+  // Format Tanggal
   const formatTanggal = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -27,15 +27,10 @@ const Riwayat = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      // TEMBAK KE BACKEND (Port 3000)
       const response = await axios.get('http://localhost:3000/api/waste', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      // Simpan data dari backend ke state
-      // response.data.data sesuai sama struktur JSON di main.go
       setLaporanList(response.data.data);
 
     } catch (error) {
@@ -45,11 +40,32 @@ const Riwayat = () => {
     }
   };
 
-  // Note: Fitur delete di backend main.go belum ada endpoint-nya.
-  // Jadi sementara kita apus di tampilan aja ya (atau disable dulu).
-  const handleDelete = (id) => {
-    alert("Fitur hapus permanen dari server belum tersedia di Backend.");
+  // --- INI FUNGSI YANG KEMAREN ILANG/MISSING ---
+  const handleSelesai = async (id) => {
+
+    console.log("Mau update ID:", id);
+    // 1. Konfirmasi dulu biar ga kepencet
+    if (!window.confirm("Yakin sampah ini udah diambil dan selesai?")) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      // 2. Tembak API Update Status (PUT)123qwe
+      
+      await axios.put(`http://localhost:3000/api/waste/${id}/status`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      // 3. Refresh data biar statusnya berubah di layar
+      await fetchData(); 
+      alert("Mantap! Status berhasil diubah jadi Selesai.");
+
+    } catch (error) {
+      console.error("Gagal update:", error);
+      alert("Gagal update status. Cek backend udah jalan belum?");
+    }
   };
+  // ---------------------------------------------
 
   return (
     <div className="flex bg-[#F8F9FD] min-h-screen font-sans">
@@ -86,20 +102,18 @@ const Riwayat = () => {
                     <th className="p-4">Jenis</th>
                     <th className="p-4">Berat</th>
                     <th className="p-4">Status</th>
-                    {/* <th className="p-4 text-center">Aksi</th> */}
+                    <th className="p-4 text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {laporanList.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                       <td className="p-4">
-                        {/* Pake formatTanggal karena data backend formatnya ISO String */}
                         <div className="font-bold text-gray-800">{formatTanggal(item.created_at)}</div>
                         <div className="text-xs text-gray-400">{formatJam(item.created_at)} WIB</div>
                       </td>
                       <td className="p-4">
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 border border-gray-200">
-                           {/* Perhatikan: Backend pake 'foto_url', bukan 'foto' */}
                            <img src={item.foto_url} alt="Sampah" className="w-full h-full object-cover" />
                         </div>
                       </td>
@@ -107,18 +121,29 @@ const Riwayat = () => {
                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.jenis === 'organik' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{item.jenis.toUpperCase()}</span>
                       </td>
                       <td className="p-4 font-bold text-gray-800">{item.berat} kg</td>
-                      <td className="p-4"><span className="flex items-center gap-2 text-yellow-600 font-medium"><span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>{item.status}</span></td>
-                      {/* Tombol Hapus gue disable dulu karena backend belum support delete */}
-                      {/* <td className="p-4 text-center">
-                        <button onClick={() => handleDelete(item.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 size={18} /></button>
-                      </td> 
-                      */}
+                      <td className="p-4">
+                        <span className={`flex items-center gap-2 font-medium ${item.status === 'selesai' ? 'text-green-600' : 'text-yellow-600'}`}>
+                          <span className={`w-2 h-2 rounded-full ${item.status === 'selesai' ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`}></span>
+                          {item.status}
+                        </span>
+                      </td>
+                      
+                      {/* LOGIC TOMBOLNYA DI SINI */}
                       <td className="p-4 text-center">
-                        {item.status === 'pending' ? (
-                          <button onClick={() => handleSelesai(item.id)} 
-                          className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors border border-blue-200">Tandai Selesai</button>
-                        ) : (<span className="text-green-600 font-bold text-xs">✅ Beres</span>)}
-                        </td>
+                        {item.status !== 'selesai' ? (
+                          <button 
+                            onClick={() => handleSelesai(item.id)} 
+                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors border border-blue-200"
+                          >
+                            Tandai Selesai
+                          </button>
+                        ) : (
+                          <span className="flex items-center justify-center gap-1 text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded-lg">
+                            <CheckCircle size={14}/> Beres
+                          </span>
+                        )}
+                      </td>
+
                     </tr>
                   ))}
                 </tbody>
